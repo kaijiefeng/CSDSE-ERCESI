@@ -1,0 +1,14 @@
+# record files will not be updated
+record/*.csv
+record/**/*.csv
+record/**/*.png
+
+# dataflow and hw description files will not be updated
+desc/dataflow_*.m
+desc/hw_*.m
+
+# MAESTRO output file will not be updated
+dataflow_*.m
+
+# pyc files
+__pycache__/*.pyc
