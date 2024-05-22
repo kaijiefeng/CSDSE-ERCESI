@@ -15,8 +15,8 @@ proms = [
 #	"test08_RL_SAC_MAESTRO.py",
 #	"test09_RL_ERDSE_MAESTRO.py",
 #	"test10_RL_ACDSE_MAESTRO.py",
-#	"test11_RL_CSDSE_MAESTRO.py"
-    "test12_RL_HAPPO_MAESTRO.py"
+	"test11_RL_CSDSE_MAESTRO.py"
+#   "test12_RL_HAPPO_MAESTRO.py"
 ]
 
 for prom in proms:

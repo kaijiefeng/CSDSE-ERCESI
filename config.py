@@ -39,7 +39,7 @@ class config_global():
 			]		
 
 		#### step3 define goal
-		#self.goal = "latency"
+		self.goal = "latency"
 		#self.goal = "energy"
-		self.goal = "edp"
+		#self.goal = "edp"
 		self.goal_index = self.metrics_name.index(self.goal)
