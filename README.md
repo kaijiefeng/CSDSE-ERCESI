@@ -157,3 +157,36 @@ In default, it will conduct DSE in the scenario of (model=VGG16, constraint=Clou
 
 Meanwhile, you can define `self.SCEN_NUM` and `self.PROCESS_NUM` to repeatedly conduct the DSE in specific scenarios on multiple parallel progresses, which is employed to evaluated the stability of DSE methods. `self.SCEN_NUM` defines the repeat count (with different seeds) and `self.PROCESS_NUM` defines the progress count.
 
+#### **CSDSE Configuration**
+
+When you implement CSDSE to conduct the DSE, you can define the `member_list` to adjust the agent division. In default, CSDSE is implemented with 8 heterogeneous agents. &#x9;
+
+```python
+member_list = ["brave_phd", "discreet_phd", "brave_master", "discreet_master", "brave_tutor", "discreet_tutor", "brave_reserve", "discreet_reserve"]
+```
+
+#### **Records of Optimization Results**
+
+The optimization results of CSDSE will be output in directory `/DSE/CSDSE-ERCESI/record/objectvalue/<Alogorithm_Name>_<Objective>.csv`, listing per-epoch normalized  optimization results of all scenarios. It should be noticed that each scenario will be evaluated for multiple times, defined by `self.SCEN_NUM` in `config.py`, and optimization results of each evaluation will be recorded. Meanwhile, the average results of each scenarios will also be calculated and recorded. Following is an example of records:
+
+| 0        | 1        | 2        | 3        | 4        |
+| :------- | :------- | :------- | :------- | :------- |
+| 1000     | 0.183539 | 0.212023 | 1000     | 0.180748 |
+| 0.267669 | 0.183539 | 0.212023 | 1.142548 | 0.180748 |
+| 0.267669 | 0.183539 | 0.212023 | 1.142548 | 0.180748 |
+| 0.170031 | 0.183539 | 0.212023 | 1.142548 | 0.180748 |
+| 0.170031 | 0.183539 | 0.212023 | 1.142548 | 0.180748 |
+| 0.170031 | 0.183539 | 0.212023 | 1.142548 | 0.180748 |
+| 0.170031 | 0.183539 | 0.212023 | 0.209222 | 0.180748 |
+| 0.170031 | 0.183539 | 0.212023 | 0.209222 | 0.180748 |
+| 0.170031 | 0.183539 | 0.212023 | 0.209222 | 0.180748 |
+| 0.170031 | 0.164538 | 0.180996 | 0.209222 | 0.180748 |
+
+The evaluation indexes are listed in the first row. In this example, the scenario of (model=VGG16, constraint=Cloud, objective=latency) is selected and the evaluation count `self.SCEN_NUM = 5`. Therefore, the scenario count is 1, the evaluation count is 5 and the evaluation indexes ranges from 0 to 4.
+
+The per-epoch normalized optimization results are listed in row #2 to #11. CSDSE has randomly sampled and evaluated 1000 design points for each model, calculating the average value of each performance metrics as the normalization baselines (listed in `/DSE/CSDSE-ERCESI/data/baseline`*`<`*`Model_Name>.csv`). Therefore, the ground truth value of optimization results should be the products the normalized values and baselines. Following table lists the metric baselines of VGG16:
+
+| latency\_avg/cycle | energy\_avg/nJ | area\_avg/um2 | power\_avg/mw | cnt\_pes\_avg | l1\_mem\_avg/Byte | l2\_mem\_avg/Byte | edp\_avg/cycle\*nJ |
+| :----------------- | :------------- | :------------ | :------------ | :------------ | :---------------- | :---------------- | :----------------- |
+| 3.0697E+09         | 3.7390E+07     | 1.0385E+11    | 1.1442E+02    | 5.8789E+03    | 5.4000E+01        | 1.2144E+06        | 1.4279E+17         |
+
