@@ -200,6 +200,9 @@ class evaluation_maestro():
 											para_list_copy.append(('C', dim_out))
 										else:
 											para_list_copy.pop(index)
+											#### test code
+											ot_list_mid = ot_list_in
+
 
 								for index, para in enumerate(para_list_copy):
 									if(index != 0): dffile.write('Cluster({}, P);\n'.format(para[1]))
@@ -278,7 +281,7 @@ class evaluation_maestro():
 
 			if(not save_files):
 				os.remove("./dataflow_{}_{}.csv".format(self.iindex, self.pid))  if os.path.exists("./dataflow_{}_{}.csv".format(self.iindex, self.pid)) else None
-				os.remove("./desc/dataflow_{}_{}.m".format(self.iindex, self.pid))  if os.path.exists("./desc/dataflow_{}_{}.m".format(self.iindex, self.pid)) else None
+				#os.remove("./desc/dataflow_{}_{}.m".format(self.iindex, self.pid))  if os.path.exists("./desc/dataflow_{}_{}.m".format(self.iindex, self.pid)) else None
 				os.remove("./desc/hw_{}_{}.m".format(self.iindex, self.pid))  if os.path.exists("./desc/hw_{}_{}.m".format(self.iindex, self.pid)) else None
 
 			metrics = {

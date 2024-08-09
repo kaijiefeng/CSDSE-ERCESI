@@ -44,9 +44,9 @@ class config_self():
 			self.AREA_THRESHOLD = 331000000
 			self.POWER_THRESHOLD = 40000
 		elif(self.target == "largeedge"):#NVDLA-LARGE
-			self.NUMPES_THRESHOLD = 1024
+			self.NUMPES_THRESHOLD = 3136#1024
 			self.L1SIZE_THRESHOLD = 27648
-			self.L2SIZE_THRESHOLD = 512000
+			self.L2SIZE_THRESHOLD = 33360000#512000
 			self.AREA_THRESHOLD = 16000000 
 			self.POWER_THRESHOLD = 450 
 		elif(self.target == "smalledge"):#eyriess
@@ -66,8 +66,8 @@ class config_self():
 		self.constraints.append(cnt_pes)
 		self.constraints.append(l1_mem)
 		self.constraints.append(l2_mem)
-		self.constraints.append(area)
-		self.constraints.append(power)
+		#self.constraints.append(area)
+		#self.constraints.append(power)
 
 		self.is_adaptive = True
 		self.is_const = False

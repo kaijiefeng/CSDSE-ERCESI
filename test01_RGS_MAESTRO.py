@@ -82,9 +82,8 @@ def run(args):
 	multiobjective_record.append(multiobjecvalue_list)
 
 if __name__ == '__main__':
-	algoname = "RGS_MOO"
-	use_multiprocess = True
-	#use_multiprocess = False
+	algoname = "RGS_3136PE_fixed_dataflow"
+	use_multiprocess = False
 	global_config = config_global()
 	TEST_BOUND = global_config.TEST_BOUND
 	PROCESS_NUM = global_config.PROCESS_NUM
@@ -109,7 +108,7 @@ if __name__ == '__main__':
 	else:
 		for iindex in range(TEST_BOUND):
 			if(iindex in PASS): continue
-			run((iindex, objective_record, timecost_record))
+			run((iindex, objective_record, timecost_record, multiobjective_record))
 
 	recorder(algoname, global_config, objective_record, timecost_record, multiobjective_record)
 

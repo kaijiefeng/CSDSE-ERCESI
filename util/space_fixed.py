@@ -10,7 +10,6 @@ import numpy as np
 from sklearn import manifold
 import matplotlib.pyplot as plt
 
-#from evaluation import evaluation_function
 from evaluation_maestro import evaluation_maestro
 
 def find_divisor(number):
@@ -386,7 +385,7 @@ class design_space():
 		else:
 			pass
 
-def create_space_maestro(model, is_adaptive = True, is_const = False, target = "largeedge"):
+def create_space_maestro_fixed(model, is_adaptive = True, is_const = False, target = "largeedge"):
 	## get the model from model file
 	if(model == 'VGG16'): model_filename = './desc/model/vgg16_model.m'
 	elif(model == 'MobileNetV2'): model_filename = './desc/model/MobileNetV2_model.m'
@@ -491,6 +490,31 @@ def create_space_maestro(model, is_adaptive = True, is_const = False, target = "
 	DSE_action_space = design_space()
 
 	## define parameters
+	#### parameters defined according to the work of Ma et.al (Optimizing the Convolution Operation to Accelerate Deep Neural Networks on FPGA)
+	'''
+	following is the description of architecture and dataflow
+	1) Loop Unrolling: For all the convolution layers, Loop
+	 1 and Loop-2 are not unrolled, which means Pkx = 1, Pky =
+	 1andPif = 1. According to (7) and (8), Pox, Poy and Pof are
+	 set to be the common factors of the feature maps (Nox, Noy)
+	 and output channels (Nof), respectively, to fully utilize the
+	 multipliers. The configurations of Pox, Poy, and Pof of different
+	 CNNs on different FPGAs are listed in Table II, which are
+	 largely constrained by the available computing resources.
+	 By setting P∗ to be constant across all the convolution layers,
+	 a uniform structure and mapping of PEs can be realized to
+	 reduce the architecture complexity.
+	2) Loop Tiling: For loop tiling, we set Tkx = Nkx, Tky
+	 = Nky, Tif = Nif as described in Section V-B and shown
+	 in Fig. 12 so that data used in Loop-1 and Loop-2 are all
+	 buffered and Tox = Nox to benefit DMA transfer. Details of
+	 Toy and Tof are described in Section V-D.
+	3) Loop Interchange: For loop interchange, we first serially
+	 compute Loop-1 and then Loop-2 as described in Section V-B.
+	 Finally, we compute Loop-3 and Loop-4, where the exact com
+	 putation order of these two loops does not have a pronounced
+	 impact on the cost, based on our P∗ and T∗ choices.
+	'''
 	l1_size = dimension_discrete(
 		name = 'l1_size',
 		default_value = 16000,
@@ -542,61 +566,73 @@ def create_space_maestro(model, is_adaptive = True, is_const = False, target = "
 		DSE_action_space.append(offchip_bw)
 
 	if(not is_const):
-		is_timecost_test = True
-		if(is_timecost_test):
-			dim_num = dimension_discrete(
-				name = 'dim_num',
-				default_value = 3,
-				step = 0,
-				rrange = [3],
-				model = {"name":"one_hot", "param":0.1}
-			)
-		else:
-			dim_num = dimension_discrete(
-				name = 'dim_num',
-				default_value = 3,
-				step = 1,
-				rrange = [2,3],
-				model = {"name":"one_hot", "param":0.1}
-			)
+		dim_num = dimension_discrete(
+			name = 'dim_num',
+			default_value = 3,
+			step = 0,
+			rrange = [3],
+			model = {"name":"one_hot", "param":0.1}
+		)
 		DSE_action_space.append(dim_num)
 		dim_out = dimension_discrete(
 			name = 'dim_out',
-			default_value = 16,
-			step = 2,
-			rrange = [2, 48]
-			#step = 0,
-			#rrange = [2,4,8,16,32,64,128,256,512]
+			default_value = 64,
+			step = 0,
+			rrange = [64]
 		)
 		DSE_action_space.append(dim_out)
 		dim_mid = dimension_discrete(
 			name = 'dim_mid',
-			default_value = 16,
-			step = 2,
-			rrange = [2,48]
-			#step = 0,
-			#rrange = [2,4,8,16,32,64,128,256,512]
+			default_value = 7,
+			step = 0,
+			rrange = [7]
 		)
 		DSE_action_space.append(dim_mid)
 		dim_in = dimension_discrete(
 			name = 'dim_in',
-			default_value = 16,
-			step = 2,
-			rrange = [2,48]
-			#step = 0,
-			#rrange = [2,4,8,16,32,64,128,256,512]
+			default_value = 7,
+			step = 0,
+			rrange = [7]
 		)
 		DSE_action_space.append(dim_in)
 		p_name_list = ['c', 'k', 'x', 'y', 'r', 's']
 		for p_name in p_name_list:
-			p = dimension_discrete(
-				name = 'p_{}'.format(p_name),
-				default_value = 1,
-				step = 1, 
-				rrange = [1,6],
-				model = {"name":"one_hot", "param":0.1}
-			)
-			DSE_action_space.append(p)
+			if(p_name == 'k'):
+				p = dimension_discrete(
+					name = 'p_{}'.format(p_name),
+					default_value = 6,
+					step = 0, 
+					rrange = [6],
+					model = {"name":"one_hot", "param":0.1}
+				)
+				DSE_action_space.append(p)
+			elif(p_name == 'y'):
+				p = dimension_discrete(
+					name = 'p_{}'.format(p_name),
+					default_value = 5,
+					step = 0, 
+					rrange = [5],
+					model = {"name":"one_hot", "param":0.1}
+				)
+				DSE_action_space.append(p)
+			elif(p_name == 'x'):
+				p = dimension_discrete(
+					name = 'p_{}'.format(p_name),
+					default_value = 4,
+					step = 0, 
+					rrange = [4],
+					model = {"name":"one_hot", "param":0.1}
+				)
+				DSE_action_space.append(p)
+			else:
+				p = dimension_discrete(
+					name = 'p_{}'.format(p_name),
+					default_value = 1,
+					step = 0, 
+					rrange = [1],
+					model = {"name":"one_hot", "param":0.1}
+				)
+				DSE_action_space.append(p)
 		if(is_adaptive):
 			for dimension_index, dimension in enumerate(dimension_set):
 				layer = dimension_index
@@ -610,22 +646,55 @@ def create_space_maestro(model, is_adaptive = True, is_const = False, target = "
 				ty_name_list = ['y_d1','y_d2','y_d3']
 
 				for o_name in o_name_list:
-					o = dimension_discrete(
-						name = 'o_{}_{}'.format(o_name, layer),
-						default_value = 1,
-						step = 1, 
-						rrange = [1,6],
-						model = {"name":"one_hot", "param":0.1}
-					)
-					DSE_action_space.append(o)
+					#### loop-1 (r and s) is innest
+					if('s' in o_name):
+						o = dimension_discrete(
+							name = 'o_{}_{}'.format(o_name, layer),
+							default_value = 1,
+							step = 0, 
+							rrange = [1],
+							model = {"name":"one_hot", "param":0.1}
+						)
+					elif('r' in o_name):
+						o = dimension_discrete(
+							name = 'o_{}_{}'.format(o_name, layer),
+							default_value = 2,
+							step = 0, 
+							rrange = [2],
+							model = {"name":"one_hot", "param":0.1}
+						)
+					#### loop-2 (c) is the second innest
+					elif('c' in o_name):
+						o = dimension_discrete(
+							name = 'o_{}_{}'.format(o_name, layer),
+							default_value = 3,
+							step = 0, 
+							rrange = [3],
+							model = {"name":"one_hot", "param":0.1}
+						)
+					#### loop-3 (x,y) and loop-4 (k) do not impact the cost
+					#### therefore, we randomly select the order of x, y, and k
+					else:
+						o = dimension_discrete(
+							name = 'o_{}_{}'.format(o_name, layer),
+							default_value = 6,
+							step = 1, 
+							rrange = [4,6],
+							model = {"name":"one_hot", "param":0.1}
+						)
+					DSE_action_space.append(o)				
+
+				#### loop-1(r,s), loop-2(c) are fixed
+				#### Tkx(ts) = Nkx(S), Tky(tr) = Nky(R), Tif(tc) = Nif(C)
+				#### loop-3 (x,y) and loop-4(k) should be explored
+				#### meanwhile, innest tiling should all be set to 1 to maintain only 1 mac in each PE
 				for tc_name in tc_name_list:
 					if(tc_name != 'c_d3'):
 						tc = dimension_discrete(
 							name = 't_{}_{}'.format(tc_name, layer),
-							default_value = 1,
+							default_value = C,
 							step = 0, 
-							rrange = find_divisor(C)
-							#rrange = find_uniform(C)
+							rrange = [C]
 						)
 					else:
 						tc = dimension_discrete(
@@ -642,7 +711,6 @@ def create_space_maestro(model, is_adaptive = True, is_const = False, target = "
 							default_value = 1,
 							step = 0, 
 							rrange = find_divisor(K)
-							#rrange = find_uniform(K)
 						)
 					else:
 						tk = dimension_discrete(
@@ -659,7 +727,6 @@ def create_space_maestro(model, is_adaptive = True, is_const = False, target = "
 							default_value = 1,
 							step = 0, 
 							rrange = find_divisor(X)
-							#rrange = find_uniform(X)
 						)
 					else:
 						tx = dimension_discrete(
@@ -676,7 +743,6 @@ def create_space_maestro(model, is_adaptive = True, is_const = False, target = "
 							default_value = 1,
 							step = 0, 
 							rrange = find_divisor(Y)
-							#rrange = find_uniform(Y)
 						)
 					else:
 						ty = dimension_discrete(

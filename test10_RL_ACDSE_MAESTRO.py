@@ -43,8 +43,16 @@ class ACDSE():
 		self.evaluation = evaluation_maestro(self.iindex, self.nnmodel, self.pid, self.DSE_action_space)
 
 		#parameter mask list
-		self.HRP, self.LRP, _  = self.DSE_action_space.corr_analysis("./data/corr_table_{}.csv".format(self.nnmodel))
+		self.HRP, self.LRP, self.HRP_weight  = self.DSE_action_space.corr_analysis("./data/corr_table_{}.csv".format(self.nnmodel))
 		print(f"HRP:{self.HRP}")
+
+		self.average_weight = [0 for i in range(self.DSE_action_space.get_lenth())]
+		major_weight = [(index, 0.8 * weight) for index,weight in self.HRP_weight]
+		minor_weight = 0.2 / len(self.LRP)
+		for index, weight in major_weight:
+			self.average_weight[index] = weight
+		for index in self.LRP:
+			self.average_weight[index] = minor_weight
 
 		#define the hyperparameters
 		self.PERIOD_BOUND = self.config.period
@@ -108,6 +116,22 @@ class ACDSE():
 
 	def more_global(self):
 		self.KLDIV_RATIO = 0
+
+	def is_obsinlist(self, obs, obslist):
+		for iobs in obslist:
+			if(np.array_equal(obs, iobs)): return True
+		return False
+
+	def is_similarobsinlist(self, obs, obslist, weights):
+		def normalized_distance(xs, ys):
+			d = 0
+			for x, y, weight in zip(xs, ys, weights):
+				if(x != y): d += weight * 1
+				else: d += weight * 0
+			return d
+		for iobs in obslist:
+			if(normalized_distance(obs, iobs) > 0.93): return True
+		return False
 
 	def train_fillter(self, obs_list, reward_list):
 		print(f"**************  Training the fillter, now we have {len(obs_list)} samples   ******************")
@@ -325,7 +349,7 @@ class ACDSE():
 				self.best_objectvalue_list.append(self.best_objectvalue)
 				self.multiobjecvalue_list.append([metrics["latency"], metrics["energy"]])
 
-			if(not self.is_obsinlist(obs, self.fillter_obs_buffer)):
+			if(not self.is_similarobsinlist(obs, self.fillter_obs_buffer, self.average_weight)):
 				self.fillter_obs_buffer.append(obs)
 				self.fillter_reward_buffer.append(reward)
 
@@ -426,12 +450,7 @@ class ACDSE():
 				"\nfinal_runtime\n", self.fruntime,
 				"\npower\n", self.fpower,
 				"\nbest_time\n", self.best_objectvalue_list[-1]
-			)	
-			
-	def is_obsinlist(self, obs, obslist):
-		for iobs in obslist:
-			if(np.array_equal(obs, iobs)): return True
-		return False	
+			)		
 
 
 def run(args):
@@ -452,7 +471,7 @@ def run(args):
 	multiobjective_record.append(DSE.multiobjecvalue_list)
 
 if __name__ == '__main__':
-	algoname = "ACDSE_MOO"
+	algoname = "ACDSE"
 	use_multiprocess = True
 	global_config = config_global()
 	TEST_BOUND = global_config.TEST_BOUND

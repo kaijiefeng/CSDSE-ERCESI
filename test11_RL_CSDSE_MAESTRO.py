@@ -14,7 +14,14 @@ from config import config_global
 sys.path.append("./dlrm")
 from dlrm_tldse import dlrm_module
 sys.path.append("./util/")
-from space import dimension_discrete, design_space, create_space_maestro, tsne2D, tsne2D_fromfile
+from space import tsne2D, tsne2D_fromfile
+
+is_fixed_dataflow = False
+if(is_fixed_dataflow):
+	from space_fixed import create_space_maestro_fixed as create_space_maestro
+else:
+	from space import create_space_maestro
+	
 from actor import actor_random, actor_policyfunction, csdse_get_log_prob, get_log_prob_rnn
 from mlp import mlp_policyfunction, rnn_policyfunction
 from sample_buffer import buffer, warehouse
@@ -107,6 +114,7 @@ class CSDSE():
 		self.ALPHA = 0.001 #RL parameter, learning step rate
 		self.ENTROPY_RATIO = 0.1
 		self.BATCH_SIZE = 1
+		self.early_stopping_loss = 0.01
 
 		#define paramters of sample_buffer
 		self.asample = dict()
@@ -267,6 +275,7 @@ class CSDSE():
 				normalized_metrics.append(metrics[key]/self.baseline_max[key])
 			if(metrics != None):
 				self.constraints.multi_update(metrics)
+				#self.constraints.print()
 				objectvalue = metrics[self.goal] / self.baseline[self.goal]
 				reward = 1 / (objectvalue * self.constraints.get_punishment())
 			else:
@@ -416,9 +425,10 @@ class CSDSE():
 					loss = loss + sample_loss
 				loss = loss / self.BATCH_SIZE
 
-				self.policy_optimizer.zero_grad()
-				loss.backward()
-				self.policy_optimizer.step()
+				if(loss > self.early_stopping_loss):
+					self.policy_optimizer.zero_grad()
+					loss.backward()
+					self.policy_optimizer.step()
 				self.t.end("train")
 			else:
 				print("no avaiable sample")
@@ -427,7 +437,7 @@ class CSDSE():
 		#end for-period
 		self.t.end("all")
 		#### save the dataflow and metrics files of the best sample
-		is_print_bestresult = False
+		is_print_bestresult = True
 		if(is_print_bestresult): 
 			if(self.best_status): 
 				#print(f"This is {self.rtype}|{self.iindex}. Here we find the best design point:\n{self.best_status}")
@@ -564,7 +574,7 @@ def run(args):
 	py_multiobjective_record.append([iindex, iindex])
 	multiobjective_record.append(py_multiobjective_record)
 
-	is_print_buffer = True
+	is_print_buffer = False
 	if(is_print_buffer):
 		buffer_obs_path = "record/buffer/obs/CSDSE_obs_{}_{}_{}_i={}.csv".format(config.goal, config.nnmodel, config.target, iindex)
 		buffer_reward_path = "record/buffer/reward/CSDSE_reward_{}_{}_{}_i={}.csv".format(config.goal, config.nnmodel, config.target, iindex)
@@ -603,7 +613,7 @@ def run(args):
 		tsne2D_fromfile(obs_file_list, reward_file_list, has_interval, interval)
 
 if __name__ == '__main__':
-	algoname = "CSDSE_HA_MS_WCB_MOO"
+	algoname = "CSDSE_3136PE_adaptive_dataflow"
 	use_multiprocess = True
 	global_config = config_global()
 	TEST_BOUND = global_config.TEST_BOUND

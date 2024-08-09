@@ -79,7 +79,7 @@ class DSE(ea.Problem):
 				self.best_objectvalue = objectvalue
 			self.best_objectvalue_list.append(self.best_objectvalue)
 			self.multiobjecvalue_list.append([metrics["latency"], metrics["energy"]])
-			print(f"Nindex:{self.Nindex}, objectvalue:{objectvalue}, reward:{reward}, bset:{self.best_objectvalue}", end = '\r')
+			print(f"Nindex:{self.Nindex}, metrics:{metrics}, objectvalue:{objectvalue}, reward:{reward}, bset:{self.best_objectvalue}", end = '\r')
 
 			vec_latency[index] = metrics["latency"]
 			vec_energy[index] = metrics["energy"]
@@ -133,15 +133,15 @@ def run(args):
 	#myalgorithm = ea.soea_EGA_templet(problem, population)
 	#myalgorithm = ea.soea_SEGA_templet(problem, population)
 	#myalgorithm = ea.soea_DE_rand_1_bin_templet(problem, population)
-	#myalgorithm = ea.soea_DE_best_1_bin_templet(problem, population)
-	myalgorithm = ea.soea_SGA_templet(problem, population)
+	myalgorithm = ea.soea_DE_best_1_bin_templet(problem, population)
+	#myalgorithm = ea.soea_SGA_templet(problem, population)
 	#myalgorithm = ea.moea_NSGA2_DE_templet(problem, population)
 	#myalgorithm = ea.moea_NSGA2_templet(problem, population)
 
 	myalgorithm.MAXGEN = MAXGEN
 	myalgorithm.MAXEVALS = config.period
-	#myalgorithm.mutOper.F = 0.5
-	#myalgorithm.recOper.XOVR = 0.7
+	myalgorithm.mutOper.F = 0.5
+	myalgorithm.recOper.XOVR = 0.7
 	myalgorithm.drawing = 0
 
 	t.start("all")
@@ -162,7 +162,7 @@ def run(args):
 
 if __name__ == '__main__':
 	algoname = "GA_MOO"
-	use_multiprocess = True
+	use_multiprocess = False
 	global_config = config_global()
 	TEST_BOUND = global_config.TEST_BOUND
 	PROCESS_NUM = global_config.PROCESS_NUM
@@ -188,6 +188,6 @@ if __name__ == '__main__':
 		for iindex in range(TEST_BOUND):
 			if(iindex in PASS): continue
 			#if(iindex != 1): continue
-			run((iindex, objective_record, timecost_record))
+			run((iindex, objective_record, timecost_record, multiobjective_record))
 
 	recorder(algoname, global_config, objective_record, timecost_record, multiobjective_record)
