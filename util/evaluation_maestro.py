@@ -53,9 +53,47 @@ class evaluation_maestro():
 			p_list.sort(reverse = True, key = lambda p:p['value'])
 			para_list = []
 			if(dim_num==3):
-				para_list.append((p_list[0]['name'], dim_out))
-				para_list.append((p_list[1]['name'], dim_mid))
-				para_list.append((p_list[2]['name'], dim_in))	
+				fixed_dataflow_type = "wei"
+				#### unrolling defining
+				'''
+				There are many alternatives for this loop-to-architecture mapping, but not ev
+				ery one of them can finally have a feasible mapping in the systolic 
+				fashion. The condition of the feasible systolic mapping can be sum
+				marized as: each of the three array variables (W, IN, and OUT) 
+				has to have fine-grained data reuse carried out at least one of the 
+				three inner loops. As mentioned in the previous 
+				section, systolic array requires data reuse in both directions, so the 
+				corresponding loops need to carry the data reuse of two different 
+				arrays (Wand IN), while the third loop needs to carry the accumu
+				lation of the output (OUT). Failing to satisfy this rule will cause a 
+				non-feasible mapping. For example, mapping loop L3 and L4 into 
+				a PE row and column is not feasible because data reuse does not 
+				happen on array W which does not relate to either loop L3 or L4. 
+				(I[i][r+q][c+p](in this work, I[c][y+r][x+s]), north-south, requiring PE_dim2 = [c,y,x,r,s])
+				(W[o][i][p][q](in this work, W[k][c][s][r]), west-east, requiring PE_dim1 = [k,c,s,r])
+				(O[o][r][c])(in this work, O[k][y][x], SIMD, requiring PE_dim0 = [k,y,x])
+				''' 
+				if(fixed_dataflow_type == "wei"):
+					#### select unrolling dimension on dim2
+					for p in p_list:
+						if(p['name'] in ['C', 'Y\'', 'X\'','R', 'S']):
+							para_list.append((p['name'], dim_out))
+							break
+					#### select unrolling dimension on dim1
+					for p in p_list:		
+						if(p['name'] in ['C', 'K', 'R', 'S']):
+							para_list.append((p['name'], dim_mid))
+							break	
+					#### select unrolling dimension on dim0
+					for p in p_list:		
+						if(p['name'] in ['K', 'Y\'', 'X\'']):
+							para_list.append((p['name'], dim_in))
+							break														
+				else:
+					para_list.append((p_list[0]['name'], dim_out))
+					para_list.append((p_list[1]['name'], dim_mid))
+					para_list.append((p_list[2]['name'], dim_in))	
+
 			elif(dim_num==2):
 				para_list.append((p_list[0]['name'], dim_mid))
 				para_list.append((p_list[1]['name'], dim_in))
@@ -64,6 +102,8 @@ class evaluation_maestro():
 			paraname_list = []
 			for para in para_list:
 				paraname_list.append(para[0])
+
+			#print(f"iindex, pid, para_list:{self.iindex, self.pid, para_list}")
 
 			## define the tiling and order ##
 			## outer tiling parse ##
@@ -228,12 +268,18 @@ class evaluation_maestro():
 			pass
 
 		#####  fill hw.m  #####
-		if(not self.is_const):
-			num_pes = 1
+		# if(not self.is_const):
+		# 	num_pes = 1
+		# 	for para in para_list:
+		# 		num_pes *= para[1]
+		# else:
+		# 	num_pes = status['num_pes']
+		num_pes = 1
+		num_pes_const = True
+		if(num_pes_const): num_pes = 3136
+		else:
 			for para in para_list:
 				num_pes *= para[1]
-		else:
-			num_pes = status['num_pes']
 		l1_size = status['l1_size']
 		l2_size = status['l2_size']
 		noc_bw = status['noc_bw']

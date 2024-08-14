@@ -11,7 +11,7 @@ class config_global():
 			self.SCEN_TYPE = self.MODEL_NUM * self.CST_NUM
 			self.SCEN_NUM = 5
 			self.PROCESS_NUM = 14
-			PASS_MODEL = [0,3,4,5]
+			PASS_MODEL = []
 			PASS_CST = [0,2]
 		else:
 			self.CST_NUM = 1 # setup only in cloud constraint scenario

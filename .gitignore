@@ -9,6 +9,7 @@ desc/hw_*.m
 
 # MAESTRO output file will not be updated
 dataflow_*.m
+dataflow_*.csv
 
 # pyc files
 __pycache__/*.pyc

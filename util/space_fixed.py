@@ -385,7 +385,7 @@ class design_space():
 		else:
 			pass
 
-def create_space_maestro_fixed(model, is_adaptive = True, is_const = False, target = "largeedge"):
+def create_space_maestro_fixed_ma(model, is_adaptive = True, is_const = False, target = "largeedge"):
 	## get the model from model file
 	if(model == 'VGG16'): model_filename = './desc/model/vgg16_model.m'
 	elif(model == 'MobileNetV2'): model_filename = './desc/model/MobileNetV2_model.m'
@@ -761,7 +761,433 @@ def create_space_maestro_fixed(model, is_adaptive = True, is_const = False, targ
 	DSE_action_space.stride_list = stride_list
 	DSE_action_space.block_list = block_list
 
-	return DSE_action_space			
+	return DSE_action_space	
+
+def create_space_maestro_fixed_wei(model, is_adaptive = True, is_const = False, target = "largeedge"):
+	## get the model from model file
+	if(model == 'VGG16'): model_filename = './desc/model/vgg16_model.m'
+	elif(model == 'MobileNetV2'): model_filename = './desc/model/MobileNetV2_model.m'
+	elif(model == 'MnasNet'): model_filename = './desc/model/mnasnet_model.m'
+	elif(model == 'ResNet50'): model_filename = './desc/model/Resnet50_model.m'
+	#elif(model == 'Transformer'): model_filename = './desc/model/Transformer_Complete_model.m'
+	elif(model == 'Transformer'): model_filename = './desc/model/Transformer_Complete_model_littleRS.m'
+	elif(model == 'GNMT'): model_filename = './desc/model/gnmt_model.m'
+	else: pass
+	## get the layer name and type from model file
+	layer_list = []
+	type_list = []
+	C_list, K_list, X_list, Y_list = [], [], [], []
+	dimension_list = []
+	stride_list = []
+	with open(model_filename, 'r') as mdfile:
+		lines = mdfile.readlines()
+		for line in lines:
+			if(line.find('Layer') != -1):
+				start = line.find('Layer') + len('Layer ')
+				end = line.find(' {')
+				layer_list.append(line[start:end])
+			if(line.find('Type') != -1):
+				start = line.find('Type') + len('Type: ')
+				if(line.find('//') != -1):
+					end = start + line[start:].find(' ')
+				else:
+					end = line.find('\n')
+				type_list.append(line[start:end])
+			if(line.find('Stride') != -1):
+				start = line.find('X') + len('X: ')
+				end = start + line[start:].find(',')
+				S_X = int(line[start:end])
+				start = line.find('Y') + len('Y: ')
+				end = start + line[start:].find(' }')
+				S_Y = int(line[start:end])
+				stride_list.append(S_X)
+			if(line.find('Dimensions') != -1):
+				start = line.find('R') + len('R: ')
+				end = start + line[start:].find(',')
+				R = int(line[start:end])
+				start = line.find('S') + len('S: ')
+				end = start + line[start:].find(',')
+				S = int(line[start:end])
+				start = line.find('C') + len('C: ')
+				end = start + line[start:].find(',')
+				C = int(line[start:end])
+				C_list.append(int(line[start:end]))
+				start = line.find('K') + len('K: ')
+				end = start + line[start:].find(',')
+				K = int(line[start:end])
+				K_list.append(int(line[start:end]))
+				
+				if(line.find('X: ') != -1):
+					start = line.find('X') + len('X: ')
+				elif(line.find('X:') != -1):
+					start = line.find('X') + len('X:')
+				#start = line.find('X') + len('X: ')
+				end = start + line[start:].find(' }')
+				X = int(line[start:end])
+				X_ = int((X - S) / S_X) + 1 
+				if(line.find('Y: ') != -1):
+					start = line.find('Y') + len('Y: ')
+				elif(line.find('Y:') != -1):
+					start = line.find('Y') + len('Y:')
+				#start = line.find('Y') + len('Y: ')
+				end = start + line[start:].find(',')
+				Y = int(line[start:end])
+				Y_ = int((Y - R) / S_Y) + 1 
+				Y_list.append(Y_)
+
+				if(Y_ < 0): print(f"layer:{layer_list[-1]}")
+
+				dimension = []
+				dimension.append(C)
+				dimension.append(K)
+				dimension.append(X_)
+				dimension.append(Y_)
+				dimension.append(R)
+				dimension.append(S)
+				dimension_list.append(dimension)
+
+	## layers with the same shapes will be grouped into blocks for uniformly optimization
+	dimension_set = list()
+	block_list = list()
+	is_clustered = True
+	if(is_clustered):
+		for dimension in dimension_list:
+			if(dimension not in dimension_set): dimension_set.append(dimension)	
+		for dimension_index, dimension in enumerate(dimension_list):
+			block_index = dimension_set.index(dimension)
+			block_list.append(block_index)
+		print(f"layer leth (after being clustered): {len(dimension_set)}")
+	else:
+		dimension_set = dimension_list
+		for dimension_index, dimension in enumerate(dimension_list):
+			block_index = dimension_index
+			block_list.append(block_index)
+		print(f"layer leth (without being clustered): {len(dimension_set)}")
+
+	## initialize the design space
+	DSE_action_space = design_space()
+
+	## define parameters
+	#### parameters defined according to the work of Wei et.al (Automated Systolic Array Architecture Synthesis for High Throughput CNN Inference on FPGAs)
+	'''
+	following is the description of architecture and dataflow
+	1. Find a feasible mapping. We need to first find a feasible map
+	ping in the systolic array to guarantee that the proper data is avail
+	able at specific locations in the PE array at every cycle. Specifically, 
+	we attempt to select three loops in Code 1 to represent the 3 dimen
+	sional parallelism of the 2-D systolic array: PE row, PE column 
+	and the SIMD vector inside a PE.
+	(Unrolling)
+	2. Select a PE array shape. Next, we select the PE array shape 
+	by determining the size of each dimension, which impacts the per
+	formance in terms of 1) the required DSP number, 2) the clock fre
+	quency, and 3) the DSP efficiency. 
+	(PE shape)
+	3. Determine the data reuse strategy. After we identify the sys
+	tolic array mapping and shape, we determine the data reuse strategy 
+	by choosing proper tiling sizes to achieve extensive data reuse. 
+	(Tiling)
+	'''
+	l1_size = dimension_discrete(
+		name = 'l1_size',
+		default_value = 16000,
+		step = 0,
+		rrange = [128, 256, 512, 1024, 2048, 4096, 8192, 16000, 32000, 64000, 128000, 256000, 512000, 1024000, 2048000]
+	)
+	DSE_action_space.append(l1_size)
+	l2_size = dimension_discrete(
+		name = 'l2_size',
+		default_value = 512000,
+		step = 0,
+		rrange = [16000, 32000, 64000, 128000, 256000, 512000, 1024000, 2048000, 4096000, 8192000, 16000000, 32000000]
+	)
+
+	#### on NVDLA, max onchip bandwidth is 128B*2 = 256 * 8b 
+	DSE_action_space.append(l2_size)
+	if(target == "largeedge" or target == "cloud"):
+		noc_bw = dimension_discrete(
+			name = 'noc_bw',
+			default_value = 3136,
+			step = 0,
+			rrange = [3136]
+		)
+		DSE_action_space.append(noc_bw)
+		#### on NVDLA, offchip bandwidth is 512b = 64*8b
+		offchip_bw = dimension_discrete(
+			name = 'offchip_bw',
+			default_value = 64,
+			step = 0,
+			rrange = [64]
+		)
+		DSE_action_space.append(offchip_bw)
+	elif(target == "smalledge"):
+		#### on eyeriss, max onchip bandwidth is 144b = 18*8b 
+		noc_bw = dimension_discrete(
+			name = 'noc_bw',
+			default_value = 18,
+			step = 0,
+			rrange = [18]
+		)
+		DSE_action_space.append(noc_bw)
+		#### on eyeriss, offchip bandwidth is 64b = 8*8b
+		offchip_bw = dimension_discrete(
+			name = 'offchip_bw',
+			default_value = 8,
+			step = 0,
+			rrange = [8]
+		)
+		DSE_action_space.append(offchip_bw)
+
+	if(not is_const):
+		dim_num = dimension_discrete(
+			name = 'dim_num',
+			default_value = 3,
+			step = 0,
+			rrange = [3],
+			model = {"name":"one_hot", "param":0.1}
+		)
+		DSE_action_space.append(dim_num)
+		dim_out = dimension_discrete(
+			name = 'dim_out',
+			default_value = 16,
+			step = 2,
+			rrange = [2, 48]
+		)
+		DSE_action_space.append(dim_out)
+		dim_mid = dimension_discrete(
+			name = 'dim_mid',
+			default_value = 16,
+			step = 2,
+			rrange = [2, 48]
+		)
+		DSE_action_space.append(dim_mid)
+		dim_in = dimension_discrete(
+			name = 'dim_in',
+			default_value = 16,
+			step = 2,
+			rrange = [2, 48]
+		)
+		DSE_action_space.append(dim_in)
+		#### unrolling defining
+		'''
+		There are many alternatives for this loop-to-architecture mapping, but not ev
+		ery one of them can finally have a feasible mapping in the systolic 
+		fashion. The condition of the feasible systolic mapping can be sum
+		marized as: each of the three array variables (W, IN, and OUT) 
+		has to have fine-grained data reuse carried out at least one of the 
+		three inner loops. As mentioned in the previous 
+		section, systolic array requires data reuse in both directions, so the 
+		corresponding loops need to carry the data reuse of two different 
+		arrays (Wand IN), while the third loop needs to carry the accumu
+		lation of the output (OUT). Failing to satisfy this rule will cause a 
+		non-feasible mapping. For example, mapping loop L3 and L4 into 
+		a PE row and column is not feasible because data reuse does not 
+		happen on array W which does not relate to either loop L3 or L4. 
+		(I[i][r+q][c+p](in this work, I[c][y+r][x+s]), north-south, requiring PE_dim2 = [c,y,x,r,s])
+		(W[o][i][p][q](in this work, W[k][c][s][r]), west-east, requiring PE_dim1 = [k,c,s,r])
+		(O[o][r][c])(in this work, O[k][y][x], SIMD, requiring PE_dim0 = [k,y,x])
+		''' 
+		p_name_list = ['c', 'k', 'x', 'y', 'r', 's']
+		for p_name in p_name_list:
+			if(p_name == 'c'):
+				p = dimension_discrete(
+					name = 'p_{}'.format(p_name),
+					default_value = 2,
+					step = 0, 
+					rrange = [2,3],
+					model = {"name":"one_hot", "param":0.1}
+				)
+			elif(p_name == 'k'):
+				p = dimension_discrete(
+					name = 'p_{}'.format(p_name),
+					default_value = 1,
+					step = 0, 
+					rrange = [1,2],
+					model = {"name":"one_hot", "param":0.1}
+				)
+			elif(p_name == 'x'):
+				p = dimension_discrete(
+					name = 'p_{}'.format(p_name),
+					default_value = 1,
+					step = 0, 
+					rrange = [1,3],
+					model = {"name":"one_hot", "param":0.1}
+				)
+			elif(p_name == 'y'):
+				p = dimension_discrete(
+					name = 'p_{}'.format(p_name),
+					default_value = 1,
+					step = 0, 
+					rrange = [1,3],
+					model = {"name":"one_hot", "param":0.1}
+				)
+			elif(p_name == 'r'):
+				p = dimension_discrete(
+					name = 'p_{}'.format(p_name),
+					default_value = 2,
+					step = 0, 
+					rrange = [2,3],
+					model = {"name":"one_hot", "param":0.1}
+				)
+			elif(p_name == 's'):
+				p = dimension_discrete(
+					name = 'p_{}'.format(p_name),
+					default_value = 2,
+					step = 0, 
+					rrange = [2,3],
+					model = {"name":"one_hot", "param":0.1}
+				)
+			DSE_action_space.append(p)
+		if(is_adaptive):
+			for dimension_index, dimension in enumerate(dimension_set):
+				layer = dimension_index
+				C, K, X, Y = dimension[0], dimension[1], dimension[2], dimension[3]
+				o_name_list = ['c_out', 'k_out', 'x_out', 'y_out', 'r_out', 's_out',\
+				'c_mid', 'k_mid', 'x_mid', 'y_mid', 'r_mid', 's_mid',\
+				'c_in', 'k_in', 'x_in', 'y_in', 'r_in', 's_in']
+				tc_name_list = ['c_d1','c_d2','c_d3']
+				tk_name_list = ['k_d1','k_d2','k_d3']
+				tx_name_list = ['x_d1','x_d2','x_d3']
+				ty_name_list = ['y_d1','y_d2','y_d3']
+
+				#### ordering are fixed
+				#### o,i,c,r,p,q, in this work, k,c,x,y,s,r
+				for o_name in o_name_list:
+					#### loop-1 (r and s) is innest
+					if('r' in o_name):
+						o = dimension_discrete(
+							name = 'o_{}_{}'.format(o_name, layer),
+							default_value = 1,
+							step = 0, 
+							rrange = [1],
+							model = {"name":"one_hot", "param":0.1}
+						)
+					elif('s' in o_name):
+						o = dimension_discrete(
+							name = 'o_{}_{}'.format(o_name, layer),
+							default_value = 2,
+							step = 0, 
+							rrange = [2],
+							model = {"name":"one_hot", "param":0.1}
+						)
+					elif('y' in o_name):
+						o = dimension_discrete(
+							name = 'o_{}_{}'.format(o_name, layer),
+							default_value = 3,
+							step = 0, 
+							rrange = [3],
+							model = {"name":"one_hot", "param":0.1}
+						)
+					elif('x' in o_name):
+						o = dimension_discrete(
+							name = 'o_{}_{}'.format(o_name, layer),
+							default_value = 4,
+							step = 0, 
+							rrange = [4],
+							model = {"name":"one_hot", "param":0.1}
+						)
+					elif('c' in o_name):
+						o = dimension_discrete(
+							name = 'o_{}_{}'.format(o_name, layer),
+							default_value = 5,
+							step = 0, 
+							rrange = [5],
+							model = {"name":"one_hot", "param":0.1}
+						)
+					elif('k' in o_name):
+						o = dimension_discrete(
+							name = 'o_{}_{}'.format(o_name, layer),
+							default_value = 6,
+							step = 0, 
+							rrange = [6],
+							model = {"name":"one_hot", "param":0.1}
+						)
+					DSE_action_space.append(o)				
+
+				#### tiling should be explored
+				'''
+				After we identify the sys
+				tolic array mapping and shape, we determine the data reuse strategy 
+				by choosing proper tiling sizes to achieve extensive data reuse.
+				'''
+				for tc_name in tc_name_list:
+					if(tc_name != 'c_d3'):
+						tc = dimension_discrete(
+							name = 't_{}_{}'.format(tc_name, layer),
+							default_value = 1,
+							step = 0, 
+							rrange = find_divisor(C)
+							#rrange = find_uniform(C)
+						)
+					else:
+						tc = dimension_discrete(
+							name = 't_{}_{}'.format(tc_name, layer),
+							default_value = 1,
+							step = 0, 
+							rrange = [1]
+						)						
+					DSE_action_space.append(tc)
+				for tk_name in tk_name_list:
+					if(tk_name != 'k_d3'):
+						tk = dimension_discrete(
+							name = 't_{}_{}'.format(tk_name, layer),
+							default_value = 1,
+							step = 0, 
+							rrange = find_divisor(K)
+							#rrange = find_uniform(K)
+						)
+					else:
+						tk = dimension_discrete(
+							name = 't_{}_{}'.format(tk_name, layer),
+							default_value = 1,
+							step = 0, 
+							rrange = [1]
+						)
+					DSE_action_space.append(tk)
+				for tx_name in tx_name_list:
+					if(tx_name != 'x_d3'):
+						tx = dimension_discrete(
+							name = 't_{}_{}'.format(tx_name, layer),
+							default_value = 1,
+							step = 0, 
+							rrange = find_divisor(X)
+							#rrange = find_uniform(X)
+						)
+					else:
+						tx = dimension_discrete(
+							name = 't_{}_{}'.format(tx_name, layer),
+							default_value = 1,
+							step = 0, 
+							rrange = [1]
+						)
+					DSE_action_space.append(tx)
+				for ty_name in ty_name_list:
+					if(ty_name != 'y_d3'):
+						ty = dimension_discrete(
+							name = 't_{}_{}'.format(ty_name, layer),
+							default_value = 1,
+							step = 0, 
+							rrange = find_divisor(Y)
+							#rrange = find_uniform(Y)
+						)
+					else:
+						ty = dimension_discrete(
+							name = 't_{}_{}'.format(ty_name, layer),
+							default_value = 1,
+							step = 0, 
+							rrange = [1]
+						)							
+					DSE_action_space.append(ty)
+	print(f"lenth:{DSE_action_space.get_lenth()}")
+	DSE_action_space.const_lenth = 8 + 6 # 8 for hardware, 6 for parallelism
+	DSE_action_space.dynamic_lenth = 3*6 + 3*4 #3*6 for array order, 3*4 for array tiling
+	DSE_action_space.layer_name = layer_list
+	DSE_action_space.type_list = type_list
+	DSE_action_space.dimension_list = dimension_list
+	DSE_action_space.stride_list = stride_list
+	DSE_action_space.block_list = block_list
+
+	return DSE_action_space					
 
 class environment_maestro():
 	def __init__(self, algo, iindex, config, test = False, delay_reward = True):

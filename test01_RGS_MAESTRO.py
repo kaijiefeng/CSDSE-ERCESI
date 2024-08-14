@@ -8,7 +8,21 @@ from multiprocessing import Process, Lock, Manager, Pool
 
 from config import config_global
 sys.path.append("./util/")
-from space import dimension_discrete, design_space, create_space_maestro
+
+is_fixed_dataflow = True
+#fixed_dataflow_type = "ma"
+fixed_dataflow_type = "wei"
+if(is_fixed_dataflow):
+	if(fixed_dataflow_type == "ma"):
+		print(f"^^^^^^^^^^^^^^^^^^^^^^^   Current Version: Fixed Dataflow of ma style   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^", end = "\n")
+		from space_fixed import create_space_maestro_fixed_ma as create_space_maestro
+	elif(fixed_dataflow_type == "wei"):
+		print(f"^^^^^^^^^^^^^^^^^^^^^^^   Current Version: Fixed Dataflow of wei style  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^", end = "\n")
+		from space_fixed import create_space_maestro_fixed_wei as create_space_maestro		
+else:
+	print(f"^^^^^^^^^^^^^^^^^^^^^^^  Current Version: Adaptive Dataflow  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^", end = "\n")
+	from space import create_space_maestro
+
 from actor import actor_random
 from evaluation_maestro import evaluation_maestro
 from config_analyzer import config_self
@@ -66,7 +80,7 @@ def run(args):
 			#print(f"metrics:{metrics}")
 		best_objectvalue_list.append(best_objectvalue)
 		multiobjecvalue_list.append([metrics["latency"], metrics["energy"]])
-		print(f"period:{count_period}, best:{best_objectvalue}, objectvalue:{objectvalue}, reward:{reward}", end = '\r')
+		print(f"iindex:{iindex}, period:{count_period}, best:{best_objectvalue}, objectvalue:{objectvalue}, reward:{reward}", end = '\r')
 
 	print(f"%%%%TEST{iindex} END%%%%")
 	t.end("all")
@@ -82,8 +96,14 @@ def run(args):
 	multiobjective_record.append(multiobjecvalue_list)
 
 if __name__ == '__main__':
-	algoname = "RGS_3136PE_fixed_dataflow"
-	use_multiprocess = False
+	if(is_fixed_dataflow):
+		if(fixed_dataflow_type == "ma"):
+			algoname = "RGS_3136PE_fixed_dataflow_ma"
+		elif(fixed_dataflow_type == "wei"):
+			algoname = "RGS_3136PE_fixed_dataflow_wei"
+	else:
+		algoname = "RGS_3136PE_adaptive_dataflow"
+	use_multiprocess = True
 	global_config = config_global()
 	TEST_BOUND = global_config.TEST_BOUND
 	PROCESS_NUM = global_config.PROCESS_NUM

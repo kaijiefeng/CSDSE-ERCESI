@@ -16,10 +16,18 @@ from dlrm_tldse import dlrm_module
 sys.path.append("./util/")
 from space import tsne2D, tsne2D_fromfile
 
-is_fixed_dataflow = False
+is_fixed_dataflow = True
+#fixed_dataflow_type = "ma"
+fixed_dataflow_type = "wei"
 if(is_fixed_dataflow):
-	from space_fixed import create_space_maestro_fixed as create_space_maestro
+	if(fixed_dataflow_type == "ma"):
+		print(f"^^^^^^^^^^^^^^^^^^^^^^^   Current Version: Fixed Dataflow of ma style   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^", end = "\n")
+		from space_fixed import create_space_maestro_fixed_ma as create_space_maestro
+	elif(fixed_dataflow_type == "wei"):
+		print(f"^^^^^^^^^^^^^^^^^^^^^^^   Current Version: Fixed Dataflow of wei style  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^", end = "\n")
+		from space_fixed import create_space_maestro_fixed_wei as create_space_maestro		
 else:
+	print(f"^^^^^^^^^^^^^^^^^^^^^^^  Current Version: Adaptive Dataflow  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^", end = "\n")
 	from space import create_space_maestro
 	
 from actor import actor_random, actor_policyfunction, csdse_get_log_prob, get_log_prob_rnn
@@ -613,7 +621,13 @@ def run(args):
 		tsne2D_fromfile(obs_file_list, reward_file_list, has_interval, interval)
 
 if __name__ == '__main__':
-	algoname = "CSDSE_3136PE_adaptive_dataflow"
+	if(is_fixed_dataflow):
+		if(fixed_dataflow_type == "ma"):
+			algoname = "CSDSE_3136PE_fixed_dataflow_ma"
+		elif(fixed_dataflow_type == "wei"):
+			algoname = "CSDSE_3136PE_fixed_dataflow_wei"
+	else:
+		algoname = "CSDSE_3136PE_adaptive_dataflow"
 	use_multiprocess = True
 	global_config = config_global()
 	TEST_BOUND = global_config.TEST_BOUND
