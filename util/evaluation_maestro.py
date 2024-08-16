@@ -9,6 +9,8 @@ module_path = os.path.abspath(os.path.join(script_dir, '../'))
 if module_path not in sys.path:
 	sys.path.insert(0, module_path)
 
+from is_fixed_dataflow import is_fixed_dataflow, fixed_dataflow_type
+
 class evaluation_maestro():
 	def __init__(self, iindex, nnmodel, pid, space, is_adaptive = True, is_const = False):
 		self.iindex = iindex
@@ -53,7 +55,6 @@ class evaluation_maestro():
 			p_list.sort(reverse = True, key = lambda p:p['value'])
 			para_list = []
 			if(dim_num==3):
-				fixed_dataflow_type = "wei"
 				#### unrolling defining
 				'''
 				There are many alternatives for this loop-to-architecture mapping, but not ev
@@ -75,20 +76,25 @@ class evaluation_maestro():
 				''' 
 				if(fixed_dataflow_type == "wei"):
 					#### select unrolling dimension on dim2
+					pick_list = []
 					for p in p_list:
 						if(p['name'] in ['C', 'Y\'', 'X\'','R', 'S']):
 							para_list.append((p['name'], dim_out))
+							pick_list.append(p['name'])
 							break
 					#### select unrolling dimension on dim1
 					for p in p_list:		
-						if(p['name'] in ['C', 'K', 'R', 'S']):
+						if((p['name'] in ['C', 'K', 'R', 'S']) and (p['name'] not in pick_list)):
 							para_list.append((p['name'], dim_mid))
+							pick_list.append(p['name'])
 							break	
 					#### select unrolling dimension on dim0
 					for p in p_list:		
-						if(p['name'] in ['K', 'Y\'', 'X\'']):
+						if((p['name'] in ['K', 'Y\'', 'X\'']) and (p['name'] not in pick_list)):
 							para_list.append((p['name'], dim_in))
-							break														
+							pick_list.append(p['name'])
+							break
+					#print(f"check: para_list:{para_list}, \np_list:{p_list}, \npick_list:{pick_list}")														
 				else:
 					para_list.append((p_list[0]['name'], dim_out))
 					para_list.append((p_list[1]['name'], dim_mid))

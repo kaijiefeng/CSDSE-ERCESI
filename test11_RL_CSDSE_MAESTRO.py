@@ -16,9 +16,8 @@ from dlrm_tldse import dlrm_module
 sys.path.append("./util/")
 from space import tsne2D, tsne2D_fromfile
 
-is_fixed_dataflow = True
-#fixed_dataflow_type = "ma"
-fixed_dataflow_type = "wei"
+from is_fixed_dataflow import is_fixed_dataflow, fixed_dataflow_type
+
 if(is_fixed_dataflow):
 	if(fixed_dataflow_type == "ma"):
 		print(f"^^^^^^^^^^^^^^^^^^^^^^^   Current Version: Fixed Dataflow of ma style   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^", end = "\n")

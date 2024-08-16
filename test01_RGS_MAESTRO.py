@@ -9,9 +9,7 @@ from multiprocessing import Process, Lock, Manager, Pool
 from config import config_global
 sys.path.append("./util/")
 
-is_fixed_dataflow = True
-#fixed_dataflow_type = "ma"
-fixed_dataflow_type = "wei"
+from is_fixed_dataflow import is_fixed_dataflow, fixed_dataflow_type
 if(is_fixed_dataflow):
 	if(fixed_dataflow_type == "ma"):
 		print(f"^^^^^^^^^^^^^^^^^^^^^^^   Current Version: Fixed Dataflow of ma style   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^", end = "\n")
@@ -54,6 +52,7 @@ def run(args):
 	best_objectvalue_list = list()
 	multiobjecvalue_list = list()
 	t = timer()
+	best_status = dict()
 
 	upbound_for_period = config.period
 	count_period = 0
@@ -76,11 +75,20 @@ def run(args):
 		else:
 			reward = 0
 		if(objectvalue < best_objectvalue and constraints.is_all_meet()):
+			best_status = status
 			best_objectvalue = objectvalue
 			#print(f"metrics:{metrics}")
+			print(f"iindex:{iindex}, period:{count_period}, best:{best_objectvalue}, objectvalue:{objectvalue}, metrics:{metrics}")
 		best_objectvalue_list.append(best_objectvalue)
 		multiobjecvalue_list.append([metrics["latency"], metrics["energy"]])
 		print(f"iindex:{iindex}, period:{count_period}, best:{best_objectvalue}, objectvalue:{objectvalue}, reward:{reward}", end = '\r')
+
+	is_print_bestresult = True
+	if(is_print_bestresult): 
+		if(best_status): 
+			#print(f"This is {self.rtype}|{self.iindex}. Here we find the best design point:\n{self.best_status}")
+			best_metric = evaluation.evaluate(best_status, save_files = True)
+		else: print(f"This is {iindex}. There is no satisfied design point, please check the constraint defintions.")
 
 	print(f"%%%%TEST{iindex} END%%%%")
 	t.end("all")
