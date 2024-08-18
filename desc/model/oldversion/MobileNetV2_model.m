@@ -110,7 +110,7 @@ Network MobileNetV2 {
 	Layer Bottleneck3_2_3 {
 		Type: CONV
 		Stride { X: 1, Y: 1 }		
-		Dimensions { K: 144, C: 144, R: 1, S: 1, Y:28, X:28 }
+		Dimensions { K: 144, C: 144, R: 1, S: 1, Y: 28, X:28 }
 	}
 
 

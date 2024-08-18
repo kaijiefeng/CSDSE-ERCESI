@@ -4,7 +4,7 @@ class config_global():
 		self.CST = ["cloud","largeedge","smalledge"]
 		#### MODEL:{0="VGG16",1="MobileNetV2",2="Mnasnet",3="ResNet50",4="Transformer",5="GNMT"}
 		#### CST:{0="cloud",1="largeedge",2="smalledge"}
-		self.period = 1000
+		self.period = 10
 		self.MODEL_NUM = len(self.MODEL)
 		if(not is_setup):
 			self.CST_NUM = len(self.CST)
@@ -18,6 +18,8 @@ class config_global():
 			self.SCEN_TYPE = self.MODEL_NUM * self.CST_NUM
 			self.SCEN_NUM = 1	
 			self.PROCESS_NUM = self.MODEL_NUM
+			PASS_MODEL = []
+			PASS_CST = []
 
 		self.TEST_BOUND = int(self.SCEN_NUM * self.MODEL_NUM * self.CST_NUM)
 		self.PASS = list()

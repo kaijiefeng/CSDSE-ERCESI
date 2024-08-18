@@ -9,7 +9,7 @@ from config import config_global
 
 class config_self():
 	def __init__(self, iindex = 0, is_setup = False):
-		global_config = config_global()
+		global_config = config_global(is_setup)
 		self.SCEN_NUM = global_config.SCEN_NUM
 		self.MODEL_NUM = global_config.MODEL_NUM
 		self.period = global_config.period

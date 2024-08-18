@@ -1,20 +1,21 @@
-from space import dimension_discrete, design_space
-from actor import actor_random
-from sample_buffer import buffer, simple_warehouse, warehouse
-
-from space import create_space_maestro
-from evaluation_maestro import evaluation_maestro
-from config import config_maestro
-
 import pdb
 import copy
 import os
+import sys
 from multiprocessing import Process, Lock, Manager, Pool
+
+from config import config_global
+sys.path.append("./util/")
+from actor import actor_random
+from sample_buffer import buffer, simple_warehouse, warehouse
+from space import create_space_maestro
+from evaluation_maestro import evaluation_maestro
+from config_analyzer import config_self
 
 def run(args):
 	iindex, = args
 	print(f"%%%%TEST{iindex} START%%%%")
-	config = config_maestro(iindex, is_setup = True)
+	config = config_self(iindex, is_setup = True)
 	nnmodel = config.nnmodel
 	goal = config.goal
 	target = config.target
@@ -23,12 +24,7 @@ def run(args):
 	config.config_check()
 
 	DSE_action_space = create_space_maestro(nnmodel, target = target)
-	evaluation = evaluation_maestro(
-		iindex, nnmodel, pid,
-		DSE_action_space.layer_name,
-		DSE_action_space.type_list,
-		DSE_action_space.stride_list,
-		DSE_action_space.block_list)
+	evaluation = evaluation_maestro(iindex, nnmodel, pid, DSE_action_space)
 
 	initial_sample_warehouse = simple_warehouse(DSE_action_space, metrics_name)
 	sample_warehouse = warehouse(DSE_action_space, config, metrics_name)
@@ -85,7 +81,7 @@ if __name__ == '__main__':
 
 	algoname = "CORR_ANALYSIS"
 	use_multiprocess = True
-	global_config = config_maestro(is_setup = True)
+	global_config = config_global(is_setup = True)
 	TEST_BOUND = global_config.TEST_BOUND
 	PROCESS_NUM = global_config.PROCESS_NUM
 
@@ -99,5 +95,4 @@ if __name__ == '__main__':
 		pool.join()
 	else:
 		for iindex in range(TEST_BOUND):
-			#if(iindex <= 4): continue
 			run((iindex,))
