@@ -724,9 +724,9 @@ def create_space_maestro_fixed_ma(model, is_adaptive = True, is_const = False, t
 					if(tx_name != 'x_d3'):
 						tx = dimension_discrete(
 							name = 't_{}_{}'.format(tx_name, layer),
-							default_value = 1,
+							default_value = X,
 							step = 0, 
-							rrange = find_divisor(X)
+							rrange = [X]
 						)
 					else:
 						tx = dimension_discrete(

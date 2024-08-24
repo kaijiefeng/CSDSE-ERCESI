@@ -627,7 +627,7 @@ if __name__ == '__main__':
 			algoname = "CSDSE_3136PE_fixed_dataflow_wei"
 	else:
 		algoname = "CSDSE_3136PE_adaptive_dataflow"
-	use_multiprocess = False
+	use_multiprocess = True
 	global_config = config_global()
 	TEST_BOUND = global_config.TEST_BOUND
 	#PROCESS_NUM = global_config.PROCESS_NUM

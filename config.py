@@ -4,14 +4,14 @@ class config_global():
 		self.CST = ["cloud","largeedge","smalledge"]
 		#### MODEL:{0="VGG16",1="MobileNetV2",2="Mnasnet",3="ResNet50",4="Transformer",5="GNMT"}
 		#### CST:{0="cloud",1="largeedge",2="smalledge"}
-		self.period = 10
+		self.period = 5000
 		self.MODEL_NUM = len(self.MODEL)
 		if(not is_setup):
 			self.CST_NUM = len(self.CST)
 			self.SCEN_TYPE = self.MODEL_NUM * self.CST_NUM
-			self.SCEN_NUM = 5
+			self.SCEN_NUM = 1
 			self.PROCESS_NUM = 14
-			PASS_MODEL = []
+			PASS_MODEL = [0,1,2,4,5]
 			PASS_CST = [0,2]
 		else:
 			self.CST_NUM = 1 # setup only in cloud constraint scenario

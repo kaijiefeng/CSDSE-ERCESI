@@ -133,6 +133,7 @@ class evaluation_maestro():
 				tname_list_x = ['t_x_out', 't_x_mid', 't_x_in']
 				#for tname_x, t_x in zip(tname_list_x, t_list_x): t_status['{}_{}'.format(tname_x, layer)] = t_x####
 				for tname_x, t_x in zip(tname_list_x, t_list_x): 
+					#t_status['{}_{}'.format(tname_x, layer)] = t_x
 					if(stride < 2): t_status['{}_{}'.format(tname_x, layer)] = t_x####
 					else: 
 						if(tname_x == 't_x_out'): t_status['{}_{}'.format(tname_x, layer)] = t_x
@@ -145,7 +146,8 @@ class evaluation_maestro():
 				tname_list_y = ['t_y_out', 't_y_mid', 't_y_in']
 				#for tname_y, t_y in zip(tname_list_y, t_list_y): t_status['{}_{}'.format(tname_y, layer)] = t_y####
 				for tname_y, t_y in zip(tname_list_y, t_list_y):
-					if(self.nnmodel != "GNMT"): 
+					if(self.nnmodel != "GNMT"):
+						# t_status['{}_{}'.format(tname_y, layer)] = t_y 
 						if(stride <2): t_status['{}_{}'.format(tname_y, layer)] = t_y####
 						else:
 							if(tname_y == 't_y_out'): t_status['{}_{}'.format(tname_y, layer)] = t_y
@@ -331,9 +333,10 @@ class evaluation_maestro():
 			throughput = mac/runtime
 			edp = runtime*energy
 
+			#pdb.set_trace()
 			if(not save_files):
 				os.remove("./dataflow_{}_{}.csv".format(self.iindex, self.pid))  if os.path.exists("./dataflow_{}_{}.csv".format(self.iindex, self.pid)) else None
-				#os.remove("./desc/dataflow_{}_{}.m".format(self.iindex, self.pid))  if os.path.exists("./desc/dataflow_{}_{}.m".format(self.iindex, self.pid)) else None
+				os.remove("./desc/dataflow_{}_{}.m".format(self.iindex, self.pid))  if os.path.exists("./desc/dataflow_{}_{}.m".format(self.iindex, self.pid)) else None
 				os.remove("./desc/hw_{}_{}.m".format(self.iindex, self.pid))  if os.path.exists("./desc/hw_{}_{}.m".format(self.iindex, self.pid)) else None
 
 			metrics = {

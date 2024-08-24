@@ -46,7 +46,7 @@ class config_self():
 		elif(self.target == "largeedge"):#NVDLA-LARGE
 			self.NUMPES_THRESHOLD = 3136#1024
 			self.L1SIZE_THRESHOLD = 27648
-			self.L2SIZE_THRESHOLD = 33360000#512000
+			self.L2SIZE_THRESHOLD = 6782500#in Ma et.al paper, L2_Mem is constrained under 2713*20Kb = 54260Kb = 6782.5KB = 6782500B
 			self.AREA_THRESHOLD = 16000000 
 			self.POWER_THRESHOLD = 450 
 		elif(self.target == "smalledge"):#eyriess
